@@ -8,6 +8,8 @@ import asyncio
 import re
 import uuid
 import threading
+import base64
+import tempfile
 from flask import Flask
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -17,6 +19,18 @@ PORT = int(os.getenv("PORT", 8080))
 DOWNLOAD_DIR = "./downloads"
 GOFILE_EXPIRY_DAYS = 10
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+# ── Cookies Setup ─────────────────────────────────────────────────────────────
+cookies_file = None
+cookies_b64 = os.getenv("COOKIES_B64")
+if cookies_b64:
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
+    tmp.write(base64.b64decode(cookies_b64))
+    tmp.close()
+    cookies_file = tmp.name
+    print("✅ Cookies loaded.")
+else:
+    print("⚠️ No COOKIES_B64 found, running without cookies.")
 
 # ── Flask keepalive ───────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -49,23 +63,27 @@ def is_youtube_url(url: str) -> bool:
 
 
 # ── Shared yt-dlp options ─────────────────────────────────────────────────────
-BASE_YDL_OPTS = {
-    "quiet": True,
-    "extractor_args": {"youtube": {"player_client": ["web"]}},
-    "http_headers": {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept-Language": "en-US,en;q=0.9",
-    },
-}
+def get_base_ydl_opts():
+    opts = {
+        "quiet": True,
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    }
+    if cookies_file:
+        opts["cookiefile"] = cookies_file
+    return opts
 
 
 # ── Fetch Video Info ──────────────────────────────────────────────────────────
 def fetch_video_info(url: str) -> dict:
-    ydl_opts = {**BASE_YDL_OPTS, "skip_download": True}
+    ydl_opts = {**get_base_ydl_opts(), "skip_download": True}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         return ydl.extract_info(url, download=False)
 
@@ -74,7 +92,7 @@ def fetch_video_info(url: str) -> dict:
 def download_media(url: str, fmt: str, quality: str, output_path: str) -> str:
     if fmt == "mp3":
         ydl_opts = {
-            **BASE_YDL_OPTS,
+            **get_base_ydl_opts(),
             "format": "bestaudio/best",
             "outtmpl": output_path + ".%(ext)s",
             "postprocessors": [{
@@ -85,7 +103,7 @@ def download_media(url: str, fmt: str, quality: str, output_path: str) -> str:
         }
     else:
         ydl_opts = {
-            **BASE_YDL_OPTS,
+            **get_base_ydl_opts(),
             "format": f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]",
             "outtmpl": output_path + ".%(ext)s",
             "merge_output_format": "mp4",
