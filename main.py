@@ -51,7 +51,7 @@ def is_youtube_url(url: str) -> bool:
 # ── Shared yt-dlp options ─────────────────────────────────────────────────────
 BASE_YDL_OPTS = {
     "quiet": True,
-    "extractor_args": {"youtube": {"player_client": ["android_vr"]}},
+    "extractor_args": {"youtube": {"player_client": ["web"]}},
     "http_headers": {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
