@@ -5,16 +5,37 @@ import os
 import yt_dlp
 import aiohttp
 import asyncio
-import os
 import re
 import uuid
+import threading
+from flask import Flask
 
 # ── Config ────────────────────────────────────────────────────────────────────
 TOKEN = os.getenv("TOKEN")
+PORT = int(os.getenv("PORT", 8080))
 
 DOWNLOAD_DIR = "./downloads"
 GOFILE_EXPIRY_DAYS = 10
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+# ── Flask keepalive ───────────────────────────────────────────────────────────
+app = Flask(__name__)
+
+@app.route("/")
+def index():
+    return "NexTube is running!", 200
+
+@app.route("/health")
+def health():
+    return "OK", 200
+
+def run_flask():
+    app.run(host="0.0.0.0", port=PORT)
+
+def keep_alive():
+    t = threading.Thread(target=run_flask)
+    t.daemon = True
+    t.start()
 
 # ── Bot Setup ─────────────────────────────────────────────────────────────────
 intents = discord.Intents.all()
@@ -154,18 +175,18 @@ class YTModal(ui.Modal, title="🎬 NexTube Downloader"):
         max_length=200,
     )
     format_label = ui.Label(
-        text="Format",          # ← text, not label
+        text="Format",
         component=FormatSelect(),
     )
     quality_label = ui.Label(
-        text="Quality  (left = MP4 · right = MP3)",   # ← text, not label
+        text="Quality  (left = MP4 · right = MP3)",
         component=QualitySelect(),
     )
 
     async def on_submit(self, interaction: discord.Interaction):
         url      = self.url_input.value.strip()
         fmt      = self.format_label.component.values[0]
-        qual_raw = self.quality_label.component.values[0]  # e.g. "720|192"
+        qual_raw = self.quality_label.component.values[0]
         mp4_q, mp3_q = qual_raw.split("|")
         qual     = mp4_q if fmt == "mp4" else mp3_q
 
@@ -188,7 +209,6 @@ class YTModal(ui.Modal, title="🎬 NexTube Downloader"):
         try:
             loop = asyncio.get_event_loop()
 
-            # Metadata
             info            = await loop.run_in_executor(None, fetch_video_info, url)
             title           = info.get("title", "Unknown Title")
             thumbnail       = info.get("thumbnail", "")
@@ -202,12 +222,10 @@ class YTModal(ui.Modal, title="🎬 NexTube Downloader"):
                 if len(upload_date_raw) == 8 else "N/A"
             )
 
-            # Download
             uid         = str(uuid.uuid4())[:8]
             output_path = os.path.join(DOWNLOAD_DIR, uid)
             file_path   = await loop.run_in_executor(None, download_media, url, fmt, qual, output_path)
 
-            # Upload
             download_url = await upload_to_gofile(file_path)
             os.remove(file_path)
 
@@ -265,4 +283,6 @@ async def on_ready():
     print(f"✅ Logged in as {bot.user} — slash commands synced.")
 
 
+# ── Run ───────────────────────────────────────────────────────────────────────
+keep_alive()
 bot.run(TOKEN)
