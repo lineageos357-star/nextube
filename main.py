@@ -66,7 +66,7 @@ def is_youtube_url(url: str) -> bool:
 def get_base_ydl_opts():
     opts = {
         "quiet": True,
-        "extractor_args": {"youtube": {"player_client": ["tv_embedded"]}},
+        "extractor_args": {"youtube": {"player_client": ["web"]}},
         "http_headers": {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
