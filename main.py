@@ -104,7 +104,7 @@ def download_media(url: str, fmt: str, quality: str, output_path: str) -> str:
     else:
         ydl_opts = {
             **get_base_ydl_opts(),
-            "format": f"bestvideo[height<={quality}]+bestaudio/best/bestvideo+bestaudio/best",,
+            "format": f"bestvideo[height<={quality}]+bestaudio/best/bestvideo+bestaudio/best",
             "outtmpl": output_path + ".%(ext)s",
             "merge_output_format": "mp4",
         }
