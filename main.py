@@ -1,7 +1,6 @@
 import discord
 from discord import ui, app_commands
 from discord.ext import commands
-from dotenv import load_dotenv
 import os
 import yt_dlp
 import aiohttp
@@ -11,7 +10,6 @@ import re
 import uuid
 
 # ── Config ────────────────────────────────────────────────────────────────────
-load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
 DOWNLOAD_DIR = "./downloads"
