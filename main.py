@@ -75,6 +75,7 @@ def get_base_ydl_opts():
             ),
             "Accept-Language": "en-US,en;q=0.9",
         },
+        "js_interpreter": "nodejs",  # explicitly tell yt-dlp to use node
     }
     if cookies_file:
         opts["cookiefile"] = cookies_file
