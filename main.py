@@ -8,8 +8,6 @@ import asyncio
 import re
 import uuid
 import threading
-import base64
-import tempfile
 from flask import Flask
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -19,18 +17,6 @@ PORT = int(os.getenv("PORT", 8080))
 DOWNLOAD_DIR = "./downloads"
 GOFILE_EXPIRY_DAYS = 10
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-# ── Cookies Setup ─────────────────────────────────────────────────────────────
-cookies_file = None
-cookies_b64 = os.getenv("COOKIES_B64")
-if cookies_b64:
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    tmp.write(base64.b64decode(cookies_b64))
-    tmp.close()
-    cookies_file = tmp.name
-    print("✅ Cookies loaded.")
-else:
-    print("⚠️ No COOKIES_B64 found, running without cookies.")
 
 # ── Flask keepalive ───────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -64,22 +50,22 @@ def is_youtube_url(url: str) -> bool:
 
 # ── Shared yt-dlp options ─────────────────────────────────────────────────────
 def get_base_ydl_opts():
-    opts = {
+    return {
         "quiet": True,
-        "extractor_args": {"youtube": {"player_client": ["web"]}},
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android_vr"],
+            }
+        },
         "http_headers": {
             "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
+                "com.google.android.apps.youtube.vr.oculus/1.56.21 "
+                "(Linux; Android 12; Oculus Quest 2 Build/SKQ1.211006.001) "
+                "gzip"
             ),
             "Accept-Language": "en-US,en;q=0.9",
         },
-        "js_interpreter": "nodejs",  # explicitly tell yt-dlp to use node
     }
-    if cookies_file:
-        opts["cookiefile"] = cookies_file
-    return opts
 
 
 # ── Fetch Video Info ──────────────────────────────────────────────────────────
